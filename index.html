@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Full Screen Light - Lumina</title>
+  
+  <!-- PWA & Mobile Optimization -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ScreenLight">
+  <link rel="apple-touch-icon" href="icon-192.svg">
+  <link rel="icon" type="image/svg+xml" href="icon-192.svg">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Fullscreen Light Surface (Tapping cycles White -> Yellow -> Red) -->
+  <div id="light-surface" aria-label="Tap to change light color" role="button" tabindex="0"></div>
+
+  <!-- Brightness Dimmer Overlay (0% dim = 100% full brightness) -->
+  <div id="dim-layer"></div>
+
+  <!-- Quick HUD Controls (Auto-fades out after 3 seconds) -->
+  <div class="hud-controls" id="hud-controls">
+    <!-- Fullscreen Toggle -->
+    <button class="icon-btn" id="btn-fullscreen" title="Fullscreen Mode (F)" aria-label="Fullscreen">
+      <svg id="icon-fs-enter" viewBox="0 0 24 24">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+      </svg>
+      <svg id="icon-fs-exit" viewBox="0 0 24 24" style="display: none;">
+        <path d="M4 14h6m0 0v6m0-6L3 21m17-7h-6m0 0v6m0-6l7 7M10 10H4m6 0V4m0 6L3 3m11 7h6m-6 0V4m0 6l7-7"></path>
+      </svg>
+    </button>
+
+    <!-- Settings Gear -->
+    <button class="icon-btn" id="btn-settings" title="Settings & Options" aria-label="Settings">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Color Change Temporary Notification Pill -->
+  <div class="color-badge" id="color-badge">
+    <div class="badge-dot" id="badge-dot"></div>
+    <span id="badge-text">White Light (सफेद)</span>
+  </div>
+
+  <!-- Intro Tip Toast -->
+  <div class="intro-toast" id="intro-toast">
+    <div><strong>💡 Tap anywhere to change color</strong></div>
+    <div class="sub-text">White ➔ Yellow ➔ Red • Double-tap for Settings</div>
+  </div>
+
+  <!-- Settings & Controls Modal -->
+  <div class="modal-backdrop" id="settings-modal" role="dialog" aria-modal="true">
+    <div class="settings-card">
+      <div class="settings-header">
+        <div class="settings-title">
+          <span>⚡ Lumina Screen Light</span>
+        </div>
+        <button class="close-btn" id="btn-close-settings" aria-label="Close settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Brightness Slider -->
+      <div class="setting-group">
+        <div class="setting-label">
+          <span>Brightness (चमक)</span>
+          <span class="brightness-val" id="brightness-text">100%</span>
+        </div>
+        <div class="slider-container">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <input type="range" id="brightness-slider" min="10" max="100" value="100" step="1">
+        </div>
+      </div>
+
+      <!-- Quick Color Select -->
+      <div class="setting-group">
+        <div class="setting-label">Colors (रंग चुनें)</div>
+        <div class="color-swatches">
+          <button class="color-option active" data-color="#ffffff" data-name="White Light (सफेद)">
+            <div class="color-preview" style="background: #ffffff;"></div>
+            <span>White</span>
+          </button>
+          <button class="color-option" data-color="#ffe600" data-name="Warm Yellow (पीला)">
+            <div class="color-preview" style="background: #ffe600;"></div>
+            <span>Yellow</span>
+          </button>
+          <button class="color-option" data-color="#ff0033" data-name="Night Red (लाल)">
+            <div class="color-preview" style="background: #ff0033;"></div>
+            <span>Red</span>
+          </button>
+          <button class="color-option" data-color="#ff9900" data-name="Soft Amber (नारंगी)">
+            <div class="color-preview" style="background: #ff9900;"></div>
+            <span>Amber</span>
+          </button>
+          <button class="color-option" data-color="#00e676" data-name="Soft Green (हरा)">
+            <div class="color-preview" style="background: #00e676;"></div>
+            <span>Green</span>
+          </button>
+          <button class="color-option" data-color="#2979ff" data-name="Cool Blue (नीला)">
+            <div class="color-preview" style="background: #2979ff;"></div>
+            <span>Blue</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Strobe & SOS Mode -->
+      <div class="setting-group">
+        <div class="setting-label">Emergency / Strobe (इमरजेंसी मोड)</div>
+        <div class="strobe-grid">
+          <button class="strobe-btn active" id="strobe-off">Off</button>
+          <button class="strobe-btn" id="strobe-fast">⚡ Fast Blink</button>
+          <button class="strobe-btn" id="strobe-sos">🚨 SOS Signal</button>
+        </div>
+      </div>
+
+      <!-- Keep Screen Awake Toggle -->
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span class="toggle-title">Keep Screen Awake (स्क्रीन बंद न हो)</span>
+          <span class="toggle-subtitle" id="wakelock-status">Active (Screen won't sleep)</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-wakelock" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <!-- Sound & Haptics -->
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span class="toggle-title">Tap Haptics & Sound (वाइब्रेशन / आवाज)</span>
+          <span class="toggle-subtitle">Click effect on color tap</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-sound" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <!-- Install PWA App Button (Shown if browser supports) -->
+      <button class="install-btn" id="btn-install" style="display: none;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Install App on Phone / PC</span>
+      </button>
+
+      <!-- Useful Tips Box -->
+      <div class="tips-box">
+        <div>📱 <strong>अधिकतम रोशनी (Max Brightness) के लिए:</strong> अपने फोन/लैपटॉप की ब्राइटनेस 100% फुल कर लें।</div>
+        <div style="margin-top: 6px;">⌨️ <strong>Shortcuts:</strong> Space/Tap = Color बदलो | F = Fullscreen | Esc = Settings बंद करो</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
